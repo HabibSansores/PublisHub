@@ -5,7 +5,8 @@ export default function SettingsTab({ onSettingsSaved, showToast }) {
   const [settings, setSettings] = useState({
     youtube: { clientId: '', clientSecret: '' },
     tiktok: { clientKey: '', clientSecret: '' },
-    facebook: { appId: '', appSecret: '' }
+    facebook: { appId: '', appSecret: '' },
+    general: { vercelUrl: '' }
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -28,6 +29,9 @@ export default function SettingsTab({ onSettingsSaved, showToast }) {
             facebook: {
               appId: data.settings.facebook?.appId || '',
               appSecret: data.settings.facebook?.appSecret || ''
+            },
+            general: {
+              vercelUrl: data.settings.general?.vercelUrl || ''
             }
           });
         }
@@ -87,6 +91,24 @@ export default function SettingsTab({ onSettingsSaved, showToast }) {
         <h2 style={{ marginBottom: '24px', fontSize: '1.5rem', borderBottom: '1px solid var(--border-muted)', paddingBottom: '12px' }}>
           ⚙️ Credenciales de Desarrollador
         </h2>
+
+        {/* General Settings */}
+        <div style={{ marginBottom: '32px', borderBottom: '1px dashed var(--border-muted)', paddingBottom: '24px' }}>
+          <h3 style={{ color: 'var(--text-normal)', marginBottom: '8px', fontSize: '1.1rem' }}>Configuración General (Vercel)</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '16px', lineHeight: '1.4' }}>
+            Dado que TikTok no permite usar <code>localhost</code> para redirecciones, utilizaremos tu URL de Vercel como puente seguro. Ingresa tu URL de Vercel aquí.
+          </p>
+          <div className="form-group" style={{ maxWidth: '500px' }}>
+            <label className="form-label">URL del Proyecto en Vercel</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="https://tu-proyecto.vercel.app"
+              value={settings.general?.vercelUrl || ''}
+              onChange={(e) => handleChange('general', 'vercelUrl', e.target.value)}
+            />
+          </div>
+        </div>
 
         {/* YouTube Section */}
         <div style={{ marginBottom: '32px' }}>
@@ -189,7 +211,7 @@ export default function SettingsTab({ onSettingsSaved, showToast }) {
           <div style={{ borderLeft: '3px solid var(--accent-cyan)', paddingLeft: '16px' }}>
             <h4 style={{ fontWeight: '600', marginBottom: '6px' }}>2. Configuración de TikTok</h4>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-              Entra al <a href="https://developers.tiktok.com/" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-cyan)' }}>Portal de Desarrolladores de TikTok</a>, crea una aplicación de tipo web, solicita los permisos de **Video Upload / Content Posting** y agrega la URI de redirección: <code style={{ background: 'black', padding: '2px 4px', borderRadius: '4px' }}>http://localhost:3000/api/auth/tiktok</code>. Copia el **Client Key** y **Client Secret**.
+              Entra al <a href="https://developers.tiktok.com/" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-cyan)' }}>Portal de Desarrolladores de TikTok</a>, crea una aplicación de tipo web, solicita el permiso **Video Upload / Content Posting**. Como TikTok no permite <code style={{ background: 'black', padding: '2px 4px', borderRadius: '4px' }}>localhost</code>, en la URI de redirección debes poner tu URL de Vercel más el endpoint: <code style={{ background: 'black', padding: '2px 4px', borderRadius: '4px' }}>https://TU-PROYECTO.vercel.app/api/auth/tiktok</code>. Copia el **Client Key** y **Client Secret** y asegúrate de rellenar la URL de Vercel en la Configuración General arriba.
             </p>
           </div>
 

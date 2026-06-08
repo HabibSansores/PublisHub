@@ -9,19 +9,38 @@ export async function GET(request, { params }) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
   const code = searchParams.get('code');
+  const state = searchParams.get('state');
 
   const settings = getSettings();
   const host = request.headers.get('host') || 'localhost:3000';
-  const protocol = request.url.startsWith('https') ? 'https' : 'http';
-  const redirectUri = `${protocol}://${host}/api/auth/${platform}`;
+  const protocol = host.includes('localhost') ? 'http' : 'https';
 
-  // 1. Manejar Desconexión (Logout)
+  // Default redirectUri
+  let redirectUri = `${protocol}://${host}/api/auth/${platform}`;
+
+  // For TikTok, if a Vercel URL is configured and we are running locally, use Vercel URL as the redirectUri
+  if (platform === 'tiktok' && host.includes('localhost')) {
+    let vercelUrl = settings.general?.vercelUrl || '';
+    if (vercelUrl) {
+      vercelUrl = vercelUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      redirectUri = `https://${vercelUrl}/api/auth/tiktok`;
+    }
+  }
+
+  // 1. Detect Vercel to Localhost redirection hop (bypass localhost restriction)
+  if (!host.includes('localhost') && code) {
+    // We are on Vercel and received the callback. Redirect browser back to local localhost!
+    const localUrl = `http://localhost:3000/api/auth/${platform}?code=${code}&state=${state || ''}&vercel_host=${host}`;
+    return Response.redirect(localUrl);
+  }
+
+  // 2. Manejar Desconexión (Logout)
   if (action === 'logout') {
     removeAccount(platform);
     return Response.redirect(`${protocol}://${host}/?disconnected=${platform}`);
   }
 
-  // 2. Manejar Redirección de Inicio de Sesión (Login)
+  // 3. Manejar Redirección de Inicio de Sesión (Login)
   if (action === 'login') {
     let authUrl = '';
     try {
@@ -62,7 +81,7 @@ export async function GET(request, { params }) {
     }
   }
 
-  // 3. Manejar Callback de OAuth (procesamiento del código)
+  // 4. Manejar Callback de OAuth (procesamiento del código)
   if (code) {
     try {
       if (platform === 'youtube') {
@@ -80,8 +99,13 @@ export async function GET(request, { params }) {
         if (!codeVerifier) {
           return Response.redirect(`${protocol}://${host}/?error=Missing code verifier for tiktok`);
         }
+
+        const vercelHost = searchParams.get('vercel_host');
+        const redirectUriForExchange = vercelHost
+          ? `https://${vercelHost}/api/auth/tiktok`
+          : redirectUri;
         
-        const tokens = await tiktokClient.getTokensFromCode(clientKey, clientSecret, code, redirectUri, codeVerifier);
+        const tokens = await tiktokClient.getTokensFromCode(clientKey, clientSecret, code, redirectUriForExchange, codeVerifier);
         const user = await tiktokClient.getUserDetails(tokens.access_token);
         
         saveTokens('tiktok', tokens);
