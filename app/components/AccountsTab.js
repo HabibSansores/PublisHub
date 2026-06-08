@@ -22,7 +22,7 @@ export default function AccountsTab({ showToast }) {
   }, []);
 
   const isConfigured = (platform) => {
-    const s = data.settings[platform];
+    const s = data?.settings?.[platform];
     if (platform === 'youtube') return !!(s?.clientId && s?.clientSecret);
     if (platform === 'tiktok') return !!(s?.clientKey && s?.clientSecret);
     if (platform === 'facebook') return !!(s?.appId && s?.appSecret);
@@ -65,7 +65,7 @@ export default function AccountsTab({ showToast }) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {platforms.map((p) => {
-          const account = data.accounts[p.id];
+          const account = data?.accounts?.[p.id];
           const configured = isConfigured(p.id);
           const connected = !!account;
 
