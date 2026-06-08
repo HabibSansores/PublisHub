@@ -1,4 +1,5 @@
 import { getSettings, saveTokens, saveAccount, removeAccount } from '../../../../lib/db';
+import { cookies } from 'next/headers';
 import * as youtubeClient from '../../../../lib/platforms/youtube';
 import * as tiktokClient from '../../../../lib/platforms/tiktok';
 import * as facebookClient from '../../../../lib/platforms/facebook';
@@ -35,7 +36,17 @@ export async function GET(request, { params }) {
         if (!clientKey || !clientSecret) {
           return Response.redirect(`${protocol}://${host}/?error=Missing credentials for tiktok`);
         }
-        authUrl = tiktokClient.getAuthUrl(clientKey, redirectUri);
+        const pkce = tiktokClient.generatePKCE();
+        
+        // Save code verifier in cookie for the callback phase
+        cookies().set('tiktok_code_verifier', pkce.codeVerifier, {
+          httpOnly: true,
+          secure: protocol === 'https',
+          sameSite: 'lax',
+          maxAge: 300 // 5 minutes
+        });
+        
+        authUrl = tiktokClient.getAuthUrl(clientKey, redirectUri, pkce.codeChallenge);
       } else if (platform === 'facebook') {
         const { appId, appSecret } = settings.facebook || {};
         if (!appId || !appSecret) {
@@ -64,7 +75,13 @@ export async function GET(request, { params }) {
 
       } else if (platform === 'tiktok') {
         const { clientKey, clientSecret } = settings.tiktok || {};
-        const tokens = await tiktokClient.getTokensFromCode(clientKey, clientSecret, code, redirectUri);
+        const codeVerifier = cookies().get('tiktok_code_verifier')?.value;
+        
+        if (!codeVerifier) {
+          return Response.redirect(`${protocol}://${host}/?error=Missing code verifier for tiktok`);
+        }
+        
+        const tokens = await tiktokClient.getTokensFromCode(clientKey, clientSecret, code, redirectUri, codeVerifier);
         const user = await tiktokClient.getUserDetails(tokens.access_token);
         
         saveTokens('tiktok', tokens);
